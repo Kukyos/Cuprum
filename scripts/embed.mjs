@@ -1,7 +1,13 @@
-// Offline step: encode every label prompt once, average per class, and score candidate
-// vision models against eval/images. The browser then only needs the vision tower.
-//   node scripts/embed.mjs                     -> evaluate all candidates
-//   node scripts/embed.mjs <model> <dtype> --write  -> evaluate one + write src/ai/embeds.json
+// Offline step: encode every label prompt once (averaged per class), then score candidate vision
+// models on three test sets and pick the person-only cutoff. The browser only runs the vision tower.
+//   node scripts/embed.mjs                              -> evaluate the candidates
+//   node scripts/embed.mjs <model> <dtype> --write      -> evaluate one + write src/ai/embeds.json
+//
+// Test sets (all from eval/images, labelled by filename prefix):
+//   clean  the photos as downloaded
+//   aug    webcam-like degradations: dim + noisy, soft + compressed, off-centre + tilted
+//   held   each e-waste photo pasted over a face, selfie, open hand or desk scene, the way people
+//          hold an item up to a webcam. This is where face/hand classes used to steal the score.
 import fs from 'node:fs';
 import sharp from 'sharp';
 import {
@@ -11,28 +17,46 @@ import {
 
 const L = JSON.parse(fs.readFileSync('src/ai/labels.json', 'utf8'));
 const IMG = 'eval/images';
-const truthOf = (f) => {
-  const p = f.split('_')[0];
-  return { battery: 'battery', cable: 'cable', casing: 'casing', cfl: 'lamp', charger: 'charger',
-    earphones: 'audio', hdd: 'storage', keyboard: 'peripheral', laptop: 'laptop', monitor: 'display',
-    mouse: 'peripheral', neg: 'none', pcb: 'pcb', phone: 'phone', remote: 'peripheral' }[p];
+const HUMAN = L.classes.map((c) => !!c.human);
+const TRUTH = {
+  battery: 'battery', powerbank: 'battery', cable: 'cable', casing: 'casing', cfl: 'lamp', charger: 'charger',
+  earphones: 'audio', speaker: 'audio', hdd: 'storage', keyboard: 'peripheral', mouse: 'peripheral', remote: 'peripheral',
+  gamepad: 'peripheral', calculator: 'peripheral', usbdrive: 'peripheral', router: 'peripheral', camera: 'peripheral',
+  laptop: 'laptop', monitor: 'display', pcb: 'pcb', phone: 'phone', tablet: 'phone', smartwatch: 'phone', neg: 'none',
+};
+const truthOf = (f) => TRUTH[f.split(/[_-]/)[0]];
+const files = fs.readdirSync(IMG).filter((f) => f.endsWith('.jpg')).sort();
+for (const f of files) if (!truthOf(f)) throw new Error(`no label for ${f}`);
+
+const raw = async (p) => {
+  const { data, info } = await p.removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  return new RawImage(new Uint8ClampedArray(data), info.width, info.height, info.channels);
 };
 
-// --aug: webcam-like degradations (dim + noisy, soft + compressed, off-centre + tilted).
-const AUG = process.argv.includes('--aug');
-async function variants(file) {
-  if (!AUG) return [await RawImage.read(file)];
-  const raw = async (p) => {
-    const { data, info } = await p.removeAlpha().raw().toBuffer({ resolveWithObject: true });
-    return new RawImage(new Uint8ClampedArray(data), info.width, info.height, info.channels);
-  };
-  const m = await sharp(file).metadata();
-  const side = Math.floor(Math.min(m.width, m.height) * 0.72);
-  return [
-    await raw(sharp(await sharp(file).modulate({ brightness: 0.45, saturation: 0.7 }).blur(0.6).jpeg({ quality: 35 }).toBuffer())),
-    await raw(sharp(await sharp(file).resize(96).resize(320).jpeg({ quality: 25 }).toBuffer())),
-    await raw(sharp(file).extract({ left: Math.floor((m.width - side) * 0.85), top: Math.floor((m.height - side) * 0.15), width: side, height: side }).rotate(14, { background: '#777' })),
-  ];
+async function buildSets() {
+  const clean = [], aug = [], held = [];
+  for (const f of files) {
+    const p = `${IMG}/${f}`, t = truthOf(f), m = await sharp(p).metadata();
+    clean.push([f, t, await RawImage.read(p)]);
+    const side = Math.floor(Math.min(m.width, m.height) * 0.72);
+    aug.push(
+      [f, t, await raw(sharp(await sharp(p).modulate({ brightness: 0.45, saturation: 0.7 }).blur(0.6).jpeg({ quality: 35 }).toBuffer()))],
+      [f, t, await raw(sharp(await sharp(p).resize(96).resize(320).jpeg({ quality: 25 }).toBuffer()))],
+      [f, t, await raw(sharp(p).extract({ left: Math.floor((m.width - side) * 0.85), top: Math.floor((m.height - side) * 0.15), width: side, height: side }).rotate(14, { background: '#777' }))],
+    );
+  }
+  const backs = files.filter((f) => /^(neg_face_0|neg_face_1|neg-selfie_0|neg-selfie_2|neg_hand_0|neg_hand_1|neg-webcam_0)/.test(f));
+  const items = files.filter((f) => truthOf(f) !== 'none' && !f.includes('-held') && !/hand|held/.test(f));
+  for (const b of backs) {
+    const bg = await sharp(`${IMG}/${b}`).resize(400, 400, { fit: 'cover' }).toBuffer();
+    for (const [i, f] of items.entries()) {
+      const s = 230 + (i % 3) * 25; // item fills 57–70 % of the frame
+      const obj = await sharp(`${IMG}/${f}`).resize(s, s, { fit: 'cover' }).toBuffer();
+      const top = i % 2 ? 400 - s - 10 : Math.floor((400 - s) / 2); // centred, or low with the face visible above
+      held.push([`${b}+${f}`, truthOf(f), await raw(sharp(bg).composite([{ input: obj, left: Math.floor((400 - s) / 2), top }]))]);
+    }
+  }
+  return { clean, aug, held };
 }
 
 const norm = (v) => { let s = 0; for (const x of v) s += x * x; s = Math.sqrt(s); return v.map((x) => x / s); };
@@ -44,56 +68,79 @@ async function classEmbeds(id) {
   for (const c of L.classes) {
     const tpl = c.neg ? L.negTemplates : L.templates;
     const prompts = c.phrases.flatMap((p) => tpl.map((t) => t.replace('{}', p)));
-    const inp = tok(prompts, { padding: 'max_length', truncation: true });
-    const e = (await text(inp)).text_embeds.normalize(2, -1).tolist();
-    const mean = e[0].map((_, j) => e.reduce((s, r) => s + r[j], 0) / e.length);
-    out.push(norm(mean));
+    const e = (await text(tok(prompts, { padding: 'max_length', truncation: true }))).text_embeds.normalize(2, -1).tolist();
+    out.push(norm(e[0].map((_, j) => e.reduce((s, r) => s + r[j], 0) / e.length)));
   }
   await text.dispose();
   return out;
 }
 
-async function evaluate(id, dtype, T) {
-  const proc = await AutoProcessor.from_pretrained(id);
-  const vis = await CLIPVisionModelWithProjection.from_pretrained(id, { dtype });
-  const files = fs.readdirSync(IMG).filter((f) => f.endsWith('.jpg')).sort();
-  let ok = 0, t = 0, n = 0, conf = 0; const miss = [];
-  for (const f of files) for (const img of await variants(`${IMG}/${f}`)) {
-    n++;
-    const t0 = performance.now();
-    const v = (await vis(await proc(img))).image_embeds.normalize(2, -1).tolist()[0];
-    t += performance.now() - t0;
-    const logits = T.map((c) => 100 * c.reduce((s, x, j) => s + x * v[j], 0));
-    const m = Math.max(...logits); const ex = logits.map((l) => Math.exp(l - m)); const Z = ex.reduce((a, b) => a + b);
-    const stream = {};
-    L.classes.forEach((c, i) => (stream[c.stream] = (stream[c.stream] ?? 0) + ex[i] / Z));
-    const [top, p] = Object.entries(stream).sort((a, b) => b[1] - a[1])[0];
-    const fine = L.classes[logits.indexOf(m)].id;
-    conf += stream[truthOf(f)] ?? 0;
-    if (top === truthOf(f)) ok++; else miss.push(`${f}→${top}(${(p * 100).toFixed(0)}%,${fine})`);
-  }
-  await vis.dispose();
-  console.log(`\n${id} [${dtype}] stream acc ${ok}/${n} = ${(100 * ok / n).toFixed(1)}%  mean p(true) ${(100 * conf / n).toFixed(1)}%  ${(t / n).toFixed(0)} ms/img`);
-  console.log('  miss:', miss.join('  '));
-  return ok / files.length;
+/** Same rule as src/ai/classifier.ts: faces, hands and people soak up probability, then drop out. */
+function decide(P, cutoff) {
+  const human = P.reduce((s, p, i) => s + (HUMAN[i] ? p : 0), 0);
+  if (cutoff !== null && human >= cutoff) return 'none';
+  const s = {};
+  L.classes.forEach((c, i) => { if (cutoff === null || !HUMAN[i]) s[c.stream] = (s[c.stream] ?? 0) + P[i]; });
+  return Object.entries(s).sort((a, b) => b[1] - a[1])[0][0];
 }
 
-const [model, dtype, write] = process.argv.slice(2).filter((a) => a !== '--aug');
-const runs = model ? [[model, [dtype ?? 'fp32']]] : [
-  ['Xenova/mobileclip_s2', ['fp16']],
-  ['Xenova/clip-vit-base-patch16', ['q8']],
-  ['Xenova/mobileclip_s0', ['fp32', 'fp16']],
-];
-for (const [id, dtypes] of runs) {
+const CUTOFFS = [null, 0.9, 0.95, 0.97, 0.98, 0.99, 0.995];
+
+async function evaluate(id, dtype, T, sets) {
+  const proc = await AutoProcessor.from_pretrained(id);
+  const vis = await CLIPVisionModelWithProjection.from_pretrained(id, { dtype });
+  const res = {};
+  for (const [name, set] of Object.entries(sets)) {
+    const P = [];
+    for (const [, , img] of set) {
+      const v = (await vis(await proc(img))).image_embeds.normalize(2, -1).tolist()[0];
+      const logits = T.map((c) => 100 * c.reduce((s, x, j) => s + x * v[j], 0));
+      const m = Math.max(...logits), ex = logits.map((l) => Math.exp(l - m)), Z = ex.reduce((a, b) => a + b);
+      P.push(ex.map((e) => e / Z));
+    }
+    res[name] = CUTOFFS.map((cut) => {
+      let ok = 0; const miss = [];
+      set.forEach(([f, t], k) => { const d = decide(P[k], cut); if (d === t) ok++; else miss.push(`${f}→${d}`); });
+      return { cut, ok, n: set.length, miss };
+    });
+  }
+  await vis.dispose();
+  console.log(`\n${id} [${dtype}]`);
+  for (const [k, cut] of CUTOFFS.entries()) {
+    const row = Object.entries(res).map(([name, r]) => `${name} ${(100 * r[k].ok / r[k].n).toFixed(1)}%`).join('  ');
+    console.log(`  ${cut === null ? 'old rule (faces compete)' : `ignore people, cutoff ${cut}`}`.padEnd(36), row);
+  }
+  return res;
+}
+
+const args = process.argv.slice(2);
+const [model, dtype] = args.filter((a) => !a.startsWith('--'));
+const write = args.includes('--write');
+const runs = model ? [[model, dtype ?? 'fp32']] : [['Xenova/mobileclip_s0', 'fp32'], ['Xenova/mobileclip_s2', 'fp16']];
+const sets = await buildSets();
+console.log(Object.entries(sets).map(([k, v]) => `${k}: ${v.length} images`).join(', '));
+for (const [id, dt] of runs) {
   const T = await classEmbeds(id);
-  for (const d of dtypes) await evaluate(id, d, T);
+  const res = await evaluate(id, dt, T, sets);
+  const cutArg = args.find((a) => a.startsWith('--cutoff='));
   if (write) {
-    fs.writeFileSync('src/ai/embeds.json', JSON.stringify({
-      model: id,
-      name: id.split('/')[1].replace(/^mobileclip_(\w+)$/, (_, v) => `MobileCLIP-${v.toUpperCase()}`).replace(/^clip-vit-base-patch(\d+)$/, 'CLIP ViT-B/$1'),
-      classes: L.classes.map((c) => c.id),
+    // --slot=gpu|cpu: the browser runs the gpu model on WebGPU and the cpu model on the WebAssembly fallback.
+    const slot = (args.find((a) => a.startsWith('--slot=')) ?? '--slot=gpu').split('=')[1];
+    const cut = cutArg ? +cutArg.split('=')[1] : 0.9;
+    const k = CUTOFFS.indexOf(cut);
+    const pick = (name) => ({ n: res[name][k].n, acc: `${(100 * res[name][k].ok / res[name][k].n).toFixed(1)} %` });
+    const file = 'src/ai/embeds.json';
+    const prev = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+    const out = { classes: L.classes.map((c) => c.id), personCutoff: cut, models: { ...(prev.models ?? {}) } };
+    if (prev.classes && prev.classes.join() !== out.classes.join()) out.models = {}; // labels changed: other slot is stale
+    out.models[slot] = {
+      id, dtype: dt,
+      name: id.split('/')[1].replace(/^mobileclip_(\w+)$/, (_, v) => `MobileCLIP-${v.toUpperCase()}`),
+      eval: { clean: pick('clean'), degraded: pick('aug'), held: pick('held') },
       embeds: T.map((r) => r.map((x) => +x.toFixed(5))),
-    }));
-    console.log('wrote src/ai/embeds.json');
+    };
+    fs.writeFileSync(file, JSON.stringify(out));
+    console.log(`wrote ${slot} slot of ${file} with cutoff ${cut}`);
+    for (const name of Object.keys(res)) console.log(`  ${name} misses:`, res[name][k].miss.slice(0, 25).join('  '));
   }
 }

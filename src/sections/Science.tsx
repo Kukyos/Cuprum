@@ -8,7 +8,7 @@ const negClasses = labels.classes.length - ewasteClasses;
 const prompts = labels.classes.reduce((n, c) => n + c.phrases.length * (c.neg ? labels.negTemplates : labels.templates).length, 0);
 
 export function Science() {
-  const ev = embeds.eval;
+  const { gpu, cpu } = embeds.models;
   return (
     <section id="science" className="science">
       <header className="section-head">
@@ -34,18 +34,18 @@ export function Science() {
         <h3>How the scanner recognises things</h3>
         <div className="sci-cols">
           <ol className="steps-list">
-            <li><b>A model that matches pictures to words.</b> {embeds.name} (Apple, CVPR 2024) learned from millions of captioned images to place a photo and its description close together in the same 512-number space.</li>
-            <li><b>Categories written as sentences.</b> Each of {ewasteClasses} e-waste categories is described several ways (“a green printed circuit board”, “a laptop battery pack”). {negClasses} more describe things that aren’t e-waste (faces, empty hands, rooms, mugs), so the scanner can say no.</li>
+            <li><b>A model that matches pictures to words.</b> MobileCLIP (Apple, CVPR 2024) learned from millions of captioned images to place a photo and its description close together in the same 512-number space. With a GPU the page runs {gpu.name}; without one it falls back to the lighter {cpu.name}.</li>
+            <li><b>Categories written as sentences.</b> Each of {ewasteClasses} e-waste categories is described several ways (“a green printed circuit board”, “a game controller”). {negClasses} more describe things that aren’t e-waste (faces, hands, rooms, mugs), so the scanner can say no.</li>
+            <li><b>People are ignored.</b> Faces, hands and bodies still compete for each frame, so they soak up the person holding the item, then drop out of the scores. Only a frame that is almost entirely person ({Math.round(embeds.personCutoff * 100)} % or more) reads as “just a person”.</li>
             <li><b>Text work done in advance.</b> Those {prompts} sentences were turned into vectors once, before the site shipped. Your browser only runs the image half of the model.</li>
-            <li><b>One comparison per frame.</b> The aiming box is cropped to 256 × 256 pixels, turned into a vector, and compared with every category. Scores are smoothed across frames, and the scanner locks after {4} steady frames above 55 %.</li>
-            <li><b>Private by design.</b> The model weights download once and are cached. Images never leave your device.</li>
+            <li><b>One comparison per frame.</b> The aiming box is cropped to 256 × 256 pixels, turned into a vector, and compared with every category. Scores are smoothed across frames, and the scanner locks after 4 steady frames above 55 %. Images never leave your device.</li>
           </ol>
           <div className="eval">
-            <p className="eval-num">{ev.clean.acc}</p>
-            <p>of {ev.clean.n} labelled test photos sorted into the right category ({ev.models}).</p>
-            <p className="eval-num">{ev.degraded.acc}</p>
-            <p>on {ev.degraded.n} deliberately degraded copies (dim and noisy, blurred and compressed, off-centre and tilted) that imitate a webcam.</p>
-            <p className="fineprint">It is zero-shot: the model was never trained on an e-waste dataset. It can’t see inside an object either, so metal content always comes from published averages for that kind of item.</p>
+            <p className="eval-num">{gpu.eval.held.acc}</p>
+            <p>of {gpu.eval.held.n} test scenes of an item held up in front of a face, selfie, open hand or desk, sorted into the right category.</p>
+            <p className="eval-num">{gpu.eval.clean.acc}</p>
+            <p>of {gpu.eval.clean.n} labelled photos, and {gpu.eval.degraded.acc} of {gpu.eval.degraded.n} copies degraded to look like a webcam (dim, blurred, compressed, tilted).</p>
+            <p className="fineprint">Figures for {gpu.name}; the CPU fallback {cpu.name} scores {cpu.eval.held.acc}, {cpu.eval.clean.acc} and {cpu.eval.degraded.acc}. Test photos are CC-licensed Wikimedia Commons images. The model is zero-shot (never trained on e-waste), and it can’t see inside an object, so metal content always comes from published averages for that kind of item.</p>
           </div>
         </div>
       </div>

@@ -27,7 +27,7 @@ export type Scenario = {
 };
 
 type State = {
-  ai: { status: AiStatus; progress: number; device: string; ms: number; error?: string };
+  ai: { status: AiStatus; progress: number; device: string; model: string; ms: number; error?: string };
   detection: Detection | null;
   presetId: string;
   massG: number;
@@ -56,7 +56,7 @@ export const streamName = labels.streams as Record<string, string>;
 const defaultProcess = litInput(ORGANISMS.find((o) => o.id === 'af')!);
 
 export const useStore = create<State>((set) => ({
-  ai: { status: 'idle', progress: 0, device: '', ms: 0 },
+  ai: { status: 'idle', progress: 0, device: '', model: '', ms: 0 },
   detection: null,
   presetId: 'pc_board',
   massG: 1000,

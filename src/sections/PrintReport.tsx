@@ -5,7 +5,6 @@ import { useResults } from '../sim/useResults.ts';
 import { RecoveryChart, ScenarioChart } from '../ui/charts.tsx';
 import { mass, pct, share, useMoney } from '../ui/format.ts';
 import { LIMITATIONS } from './Report.tsx';
-import embeds from '../ai/embeds.json';
 
 export function PrintReport() {
   const s = useStore();
@@ -28,7 +27,7 @@ export function PrintReport() {
               <img src={d.snapshot} alt="" />
               <div>
                 <p><b>{streamName[d.stream]}</b>, most like “{classById[d.classId].name}”</p>
-                <p>Match score {pct(d.score)} ({embeds.name}, zero-shot, on-device). A prediction, not a guaranteed identification.</p>
+                <p>Match score {pct(d.score)} ({s.ai.model || 'MobileCLIP'}, zero-shot, on-device). A prediction, not a guaranteed identification.</p>
                 <p>Other candidates: {d.top.slice(1, 4).map((t) => `${classById[t.id].name} ${pct(t.p)}`).join('; ')}</p>
                 <p>Recommended route: {ROUTES[d.stream]?.headline}</p>
               </div>

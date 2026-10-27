@@ -477,3 +477,4 @@ table.data th, table.data td { padding: 8px 12px 8px 0; border-bottom: 1px solid
   .print-report ul, .print-report ol { padding-left: 18px; }
   .pr-refs li { font-size: 8.5pt; margin-bottom: 2px; }
 }
+.pred-note { font-size: 13.5px; color: var(--paper-3); margin-top: 6px; }

@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { bestIn, classify, cropSquare, streamScores, toDataURL, topClasses } from '../ai/classifier.ts';
+import { bestIn, classify, cropSquare, toDataURL, topClasses, verdict, CLASSES, PERSON_CUTOFF, type Result } from '../ai/classifier.ts';
 import { classById, streamName, useStore } from '../store.ts';
 import { ROUTES } from '../data/science.ts';
 import samples from '../data/samples.json';
 import { chime, miss, tick } from '../sound.ts';
 import { pct } from '../ui/format.ts';
-import embeds from '../ai/embeds.json';
 
 const AIM = 0.78; // aiming box: share of the shorter video side that is sent to the model
 const LOCK_SCORE = 0.55; // stream-level match score needed to count a frame as stable
@@ -24,9 +23,9 @@ export function Scan() {
   const video = useRef<HTMLVideoElement>(null);
   const section = useRef<HTMLElement>(null);
   const stream = useRef<MediaStream | null>(null);
-  const loop = useRef({ token: 0, visible: true, smooth: null as number[] | null, stable: 0, last: '' });
+  const loop = useRef({ token: 0, visible: true, smooth: null as number[] | null, human: 0, stable: 0, last: '' });
   const [phase, setPhase] = useState<Phase>('off');
-  const [probs, setProbs] = useState<number[] | null>(null);
+  const [frame, setFrame] = useState<{ probs: number[]; human: number } | null>(null);
   const [mirrored, setMirrored] = useState(false);
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [lockedSrc, setLockedSrc] = useState<string | null>(null);
@@ -68,20 +67,20 @@ export function Scan() {
     }
   }
 
-  function lock(snapshot: ImageData, p: number[], source: 'camera' | 'upload' | 'sample') {
-    const [[st, score]] = streamScores(p);
+  function lock(snapshot: ImageData, p: number[], human: number, source: 'camera' | 'upload' | 'sample') {
+    const [st, score] = verdict(p, human);
     const best = bestIn(st, p);
     const url = toDataURL(snapshot);
     detect({ classId: best.id, stream: st, score, top: topClasses(p), snapshot: url, source });
     setLockedSrc(url);
-    setProbs(p);
+    setFrame({ probs: p, human });
     setPhase('locked');
     if (st === 'none') miss(); else chime();
   }
 
   async function run() {
     const token = ++loop.current.token;
-    Object.assign(loop.current, { smooth: null, stable: 0, last: '' });
+    Object.assign(loop.current, { smooth: null, human: 0, stable: 0, last: '' });
     setPhase('searching');
     while (token === loop.current.token) {
       const v = video.current!;
@@ -90,19 +89,20 @@ export function Scan() {
         continue;
       }
       const t0 = performance.now();
-      const frame = cropSquare(v, v.videoWidth, v.videoHeight, AIM);
-      const snap = new ImageData(new Uint8ClampedArray(frame.data), frame.width, frame.height);
-      let p: number[];
-      try { ({ probs: p } = await classify(frame)); } catch { await wait(500); continue; }
+      const crop = cropSquare(v, v.videoWidth, v.videoHeight, AIM);
+      const snap = new ImageData(new Uint8ClampedArray(crop.data), crop.width, crop.height);
+      let r: Result;
+      try { r = await classify(crop); } catch { await wait(500); continue; }
       if (token !== loop.current.token) return;
       const L = loop.current;
-      L.smooth = L.smooth ? L.smooth.map((s, i) => s * 0.55 + p[i] * 0.45) : p;
-      setProbs(L.smooth);
-      const [[top, score]] = streamScores(L.smooth);
+      L.smooth = L.smooth ? L.smooth.map((s, i) => s * 0.55 + r.probs[i] * 0.45) : r.probs;
+      L.human = L.smooth === r.probs ? r.human : L.human * 0.55 + r.human * 0.45;
+      setFrame({ probs: L.smooth, human: L.human });
+      const [top, score] = verdict(L.smooth, L.human);
       const good = top !== 'none' && score >= LOCK_SCORE;
       L.stable = good ? (top === L.last ? L.stable + 1 : 1) : 0;
       L.last = top;
-      if (L.stable >= LOCK_FRAMES) return lock(snap, L.smooth, 'camera');
+      if (L.stable >= LOCK_FRAMES) return lock(snap, L.smooth, L.human, 'camera');
       setPhase(L.stable >= 2 ? 'steady' : 'searching');
       if (L.stable === 2) tick();
       await wait(Math.max(0, FRAME_GAP_MS - (performance.now() - t0)));
@@ -113,11 +113,11 @@ export function Scan() {
     loop.current.token++;
     setPhase('analysing');
     const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' });
-    const frame = cropSquare(bmp, bmp.width, bmp.height, 1);
-    const snap = new ImageData(new Uint8ClampedArray(frame.data), frame.width, frame.height);
+    const crop = cropSquare(bmp, bmp.width, bmp.height, 1);
+    const snap = new ImageData(new Uint8ClampedArray(crop.data), crop.width, crop.height);
     setLockedSrc(toDataURL(snap));
-    const { probs: p } = await classify(frame);
-    lock(snap, p, source);
+    const r = await classify(crop);
+    lock(snap, r.probs, r.human, source);
   }
 
   const onFile = (e: ChangeEvent<HTMLInputElement>) => {
@@ -129,8 +129,9 @@ export function Scan() {
   const rescan = () => (stream.current ? run() : setPhase('off'));
   const flip = () => { const m = facing === 'environment' ? 'user' : 'environment'; setFacing(m); startCamera(m); };
 
-  const streams = probs ? streamScores(probs) : [];
-  const [topStream, topScore] = streams[0] ?? ['none', 0];
+  const probs = frame?.probs ?? null;
+  const [topStream, topScore] = frame ? verdict(frame.probs, frame.human) : ['none', 0];
+  const personOnly = !!frame && frame.human >= PERSON_CUTOFF;
   const fine = probs ? bestIn(topStream, probs) : null;
   const cameraOn = !!stream.current && phase !== 'denied' && phase !== 'nocam';
   const live = phase === 'searching' || phase === 'steady';
@@ -138,7 +139,9 @@ export function Scan() {
   const stateText: Record<Phase, string> = {
     off: 'Camera off',
     starting: 'Starting camera…',
-    searching: ai.status === 'ready' ? 'Looking for e-waste. Hold the item inside the frame.' : `Waiting for the AI model (${Math.round(ai.progress * 100)} %)…`,
+    searching: ai.status !== 'ready' ? `Waiting for the AI model (${Math.round(ai.progress * 100)} %)…`
+      : personOnly ? 'Only a person in frame. Hold an item up to the camera.'
+      : 'Looking for e-waste. Hold the item inside the frame.',
     steady: 'Hold still…',
     analysing: ai.status === 'ready' ? 'Analysing photo…' : `Waiting for the AI model (${Math.round(ai.progress * 100)} %)…`,
     locked: detection?.stream === 'none' ? 'No e-waste found in this image' : 'Locked on',
@@ -151,7 +154,7 @@ export function Scan() {
       <header className="section-head">
         <p className="step">Step 1 of 4</p>
         <h2>Show it an object</h2>
-        <p className="section-lede">Point the camera at a circuit board, battery, cable, phone or any other gadget. The model compares each frame against 32 categories, entirely on this device; nothing is uploaded.</p>
+        <p className="section-lede">Point the camera at a circuit board, battery, cable, phone or any other gadget. The model compares each frame against {CLASSES.length} categories, entirely on this device; nothing is uploaded. It ignores your face and hands.</p>
       </header>
 
       <div className="scan-grid">
@@ -192,14 +195,18 @@ export function Scan() {
         <div className="readout" aria-live="polite">
           <div className="pred">
             <p className="pred-kicker">{phase === 'locked' ? 'Prediction' : probs ? 'Best match right now' : 'Prediction'}</p>
-            <h3>{probs ? streamName[topStream] : 'Nothing yet'}</h3>
+            <h3>{personOnly ? 'Just a person' : probs ? streamName[topStream] : 'Nothing yet'}</h3>
             {probs && fine && topStream !== 'none' && (
               <p className="pred-sub">Most like: {fine.name}. Match score <b>{pct(topScore)}</b></p>
+            )}
+            {frame && frame.human > 0.05 && !personOnly && (
+              <p className="pred-note">Ignoring faces and hands ({pct(frame.human)} of this frame).</p>
             )}
           </div>
 
           <ol className="scores">
-            {(probs ? topClasses(probs, 6) : []).map(({ id, p }) => (
+            {personOnly && <li className="empty">Faces and hands are ignored, so there’s nothing to score yet. Hold an item up.</li>}
+            {(probs && !personOnly ? topClasses(probs, 6) : []).map(({ id, p }) => (
               <li key={id} className={classById[id].stream === topStream ? 'is-top' : ''}>
                 <span className="sc-name">{classById[id].name}</span>
                 <span className="sc-bar"><i style={{ transform: `scaleX(${p})` }} /></span>
@@ -212,8 +219,8 @@ export function Scan() {
           {phase === 'locked' && detection && <RouteCard stream={detection.stream} />}
 
           <p className="fineprint">
-            Match scores are the model’s confidence relative to these 32 categories, not a guarantee.
-            Model: {embeds.name}{ai.device && <>, running on {ai.device}</>}{ai.ms > 0 && <>, {Math.round(ai.ms)} ms per frame</>}.
+            Match scores are the model’s confidence relative to these {CLASSES.length} categories, not a guarantee.
+            Model: {ai.model || 'MobileCLIP'}{ai.device && <>, running on {ai.device}</>}{ai.ms > 0 && <>, {Math.round(ai.ms)} ms per frame</>}.
           </p>
         </div>
       </div>

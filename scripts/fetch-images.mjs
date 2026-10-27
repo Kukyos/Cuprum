@@ -3,13 +3,24 @@ import fs from 'node:fs';
 const out = 'eval/images';
 const UA = { 'User-Agent': 'CuprumEval/1.0 (student project; contact via github)' };
 const queries = {
-  casing_a: 'computer tower case',
-  casing_b: 'printer plastic housing',
-  monitor_a: 'computer monitor on desk',
-  phone_a: 'smartphone held in hand',
-  pcb_gpu_a: 'PCI Express graphics card',
-  pcb_hand: 'hand holding circuit board',
-  pcb_tv: 'television circuit board',
+  gamepad: 'gamepad controller',
+  'gamepad-held': 'person holding game controller',
+  'phone-held': 'person holding smartphone',
+  'battery-held': 'hand holding battery',
+  'remote-held': 'hand holding remote control',
+  'mouse-held': 'hand holding computer mouse',
+  'pcb-held': 'person holding motherboard',
+  'cable-held': 'hand holding cable plug',
+  powerbank: 'power bank',
+  tablet: 'tablet computer',
+  calculator: 'pocket calculator',
+  usbdrive: 'USB flash drive',
+  router: 'wireless router',
+  smartwatch: 'smartwatch',
+  camera: 'digital compact camera',
+  speaker: 'bluetooth speaker',
+  'neg-selfie': 'selfie young man',
+  'neg-webcam': 'person sitting at desk',
 };
 const credits = fs.existsSync(out+'/credits.json') ? JSON.parse(fs.readFileSync(out+'/credits.json','utf8')) : {};
 for (const [cls, q] of Object.entries(queries)) {

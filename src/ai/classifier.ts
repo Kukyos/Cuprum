@@ -1,7 +1,9 @@
 import labels from './labels.json';
+import table from './embeds.json';
 import { useStore } from '../store.ts';
 
-type Result = { probs: number[]; ms: number };
+/** probs: match scores with faces, hands and people removed. human: share of the frame they explained. */
+export type Result = { probs: number[]; human: number; ms: number };
 
 const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
 const pending = new Map<number, { resolve: (r: Result) => void; reject: (e: Error) => void }>();
@@ -11,10 +13,10 @@ worker.onmessage = (e) => {
   const m = e.data;
   const ai = useStore.getState().ai;
   if (m.type === 'progress') useStore.setState({ ai: { ...ai, status: 'loading', progress: m.progress } });
-  else if (m.type === 'ready') useStore.setState({ ai: { ...ai, status: 'ready', progress: 1, device: m.device } });
+  else if (m.type === 'ready') useStore.setState({ ai: { ...ai, status: 'ready', progress: 1, device: m.device, model: m.model } });
   else if (m.type === 'result') {
     useStore.setState({ ai: { ...ai, ms: m.ms } });
-    pending.get(m.id)?.resolve({ probs: m.probs, ms: m.ms });
+    pending.get(m.id)?.resolve({ probs: m.probs, human: m.human, ms: m.ms });
     pending.delete(m.id);
   } else if (m.type === 'error') {
     if (m.id >= 0) { pending.get(m.id)?.reject(new Error(m.error)); pending.delete(m.id); }
@@ -38,6 +40,14 @@ export function classify(data: ImageData): Promise<Result> {
 }
 
 export const CLASSES = labels.classes;
+
+/** Above this share of face/hand/person, the frame shows only a person: say so instead of guessing. */
+export const PERSON_CUTOFF: number = table.personCutoff;
+
+/** Winning stream and its score, or 'none' when the frame is essentially just a person. */
+export function verdict(probs: number[], human: number): [string, number] {
+  return human >= PERSON_CUTOFF ? ['none', human] : streamScores(probs)[0];
+}
 
 export function streamScores(probs: number[]) {
   const s: Record<string, number> = {};

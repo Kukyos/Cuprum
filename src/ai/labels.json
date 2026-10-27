@@ -1,90 +1,487 @@
 {
-  "templates": ["a photo of {}.", "a close-up photo of {}.", "a blurry photo of {}.", "a photo of {} held in a hand."],
-  "negTemplates": ["a photo of {}.", "a blurry photo of {}.", "a webcam photo of {}."],
+  "templates": [
+    "a photo of {}.",
+    "a close-up photo of {}.",
+    "a blurry photo of {}.",
+    "a photo of {} held in a hand.",
+    "a webcam photo of a person holding up {}."
+  ],
+  "negTemplates": [
+    "a photo of {}.",
+    "a blurry photo of {}.",
+    "a webcam photo of {}."
+  ],
   "streams": {
     "pcb": "Circuit board",
     "battery": "Battery",
     "cable": "Cable / wire",
     "casing": "Casing / housing",
-    "phone": "Mobile phone",
+    "phone": "Phone / tablet",
     "laptop": "Laptop",
     "display": "Display / screen",
     "storage": "Hard drive",
-    "peripheral": "Peripheral",
+    "peripheral": "Small electronics",
     "charger": "Charger / adapter",
     "audio": "Audio device",
     "lamp": "Lamp / bulb",
     "none": "Not e-waste"
   },
   "classes": [
-    { "id": "pcb_motherboard", "stream": "pcb", "name": "Computer motherboard", "preset": "pc_board",
-      "phrases": ["a computer motherboard", "a desktop PC motherboard with a CPU socket and RAM slots", "a laptop motherboard"] },
-    { "id": "pcb_phone", "stream": "pcb", "name": "Phone logic board", "preset": "phone_board",
-      "phrases": ["a smartphone logic board", "a small mobile phone circuit board covered in tiny chips", "the main board taken out of a cell phone"] },
-    { "id": "pcb_ram", "stream": "pcb", "name": "RAM module", "preset": "pc_board",
-      "phrases": ["a RAM memory stick", "a DIMM memory module with black chips and gold contacts", "computer RAM"] },
-    { "id": "pcb_gpu", "stream": "pcb", "name": "Graphics card", "preset": "pc_board",
-      "phrases": ["a graphics card", "a GPU video card with a heatsink and fan", "a PCI Express expansion card"] },
-    { "id": "pcb_generic", "stream": "pcb", "name": "Printed circuit board", "preset": "pc_board",
-      "phrases": ["a green printed circuit board", "a circuit board with chips, resistors and capacitors", "an electronic circuit board", "a PCB with solder joints"] },
-    { "id": "pcb_lowgrade", "stream": "pcb", "name": "Low-grade board (TV / PSU)", "preset": "tv_board",
-      "phrases": ["a power supply circuit board with big capacitors and a transformer", "a TV circuit board", "a simple single-sided circuit board from a toy or appliance"] },
-
-    { "id": "battery_cell", "stream": "battery", "name": "Li-ion cell (18650)", "preset": "liion",
-      "phrases": ["an 18650 lithium-ion battery cell", "a cylindrical rechargeable lithium battery"] },
-    { "id": "battery_pack", "stream": "battery", "name": "Li-ion battery pack", "preset": "liion",
-      "phrases": ["a rectangular lithium-ion phone battery", "a laptop battery pack", "a rechargeable camera battery"] },
-    { "id": "battery_alkaline", "stream": "battery", "name": "Alkaline battery", "preset": "alkaline",
-      "phrases": ["AA batteries", "an alkaline battery", "a AAA battery"] },
-    { "id": "battery_coin", "stream": "battery", "name": "Coin cell", "preset": "coin_cell",
-      "phrases": ["a coin cell button battery", "a CR2032 lithium coin battery"] },
-
-    { "id": "cable_power", "stream": "cable", "name": "Power cable / wire", "preset": "cable",
-      "phrases": ["a coil of electrical wire", "an electrical power cable", "a bundle of insulated copper wires"] },
-    { "id": "cable_usb", "stream": "cable", "name": "USB / data cable", "preset": "cable",
-      "phrases": ["a USB cable", "a phone charging cable", "a USB-C cable connector"] },
-
-    { "id": "casing_plastic", "stream": "casing", "name": "Plastic housing", "preset": "casing",
-      "phrases": ["a plastic electronics casing", "a broken plastic housing from an electronic device", "an empty plastic shell of a gadget"] },
-    { "id": "casing_tower", "stream": "casing", "name": "Computer case", "preset": "casing",
-      "phrases": ["a computer tower case", "a desktop PC case", "an open computer chassis"] },
-
-    { "id": "phone", "stream": "phone", "name": "Mobile phone", "preset": "phone",
-      "phrases": ["a smartphone", "a mobile phone", "an old cell phone", "a handheld PDA"] },
-    { "id": "laptop", "stream": "laptop", "name": "Laptop", "preset": "laptop",
-      "phrases": ["a laptop computer", "an open laptop", "a notebook computer"] },
-    { "id": "display", "stream": "display", "name": "Monitor / screen", "preset": "display",
-      "phrases": ["a computer monitor", "an LCD screen", "a flat-screen TV", "a CRT monitor"] },
-    { "id": "hdd", "stream": "storage", "name": "Hard disk drive", "preset": "hdd",
-      "phrases": ["a hard disk drive", "the inside of a hard drive with shiny platters", "an opened hard drive"] },
-    { "id": "keyboard", "stream": "peripheral", "name": "Keyboard", "preset": "peripheral",
-      "phrases": ["a computer keyboard", "keyboard keys"] },
-    { "id": "mouse", "stream": "peripheral", "name": "Computer mouse", "preset": "peripheral",
-      "phrases": ["a computer mouse", "a wireless gaming mouse"] },
-    { "id": "remote", "stream": "peripheral", "name": "Remote control", "preset": "peripheral",
-      "phrases": ["a TV remote control", "a remote control with buttons", "a key fob remote"] },
-    { "id": "charger", "stream": "charger", "name": "Charger / adapter", "preset": "charger",
-      "phrases": ["a phone charger", "a wall power adapter plug", "an AC adapter power brick"] },
-    { "id": "audio", "stream": "audio", "name": "Earphones / headphones", "preset": "audio",
-      "phrases": ["earphones", "headphones", "wireless earbuds"] },
-    { "id": "lamp", "stream": "lamp", "name": "CFL / LED bulb", "preset": "lamp",
-      "phrases": ["a compact fluorescent light bulb", "a spiral CFL bulb", "an LED light bulb", "a fluorescent tube"] },
-
-    { "id": "neg_face", "stream": "none", "name": "Face", "neg": true,
-      "phrases": ["a person's face", "a selfie", "a portrait of a person"] },
-    { "id": "neg_hand", "stream": "none", "name": "Empty hand", "neg": true,
-      "phrases": ["an empty open hand", "a human hand with nothing in it", "the palm of a hand"] },
-    { "id": "neg_people", "stream": "none", "name": "People", "neg": true,
-      "phrases": ["a person", "people", "a crowd of people"] },
-    { "id": "neg_room", "stream": "none", "name": "Room", "neg": true,
-      "phrases": ["a room interior", "an office", "a living room", "a classroom"] },
-    { "id": "neg_surface", "stream": "none", "name": "Surface", "neg": true,
-      "phrases": ["an empty table", "a blank wall", "the ceiling", "a floor"] },
-    { "id": "neg_cup", "stream": "none", "name": "Cup / bottle", "neg": true,
-      "phrases": ["a coffee mug", "a water bottle", "a drinking glass"] },
-    { "id": "neg_book", "stream": "none", "name": "Book / paper", "neg": true,
-      "phrases": ["a book", "a sheet of paper", "a paper notebook"] },
-    { "id": "neg_misc", "stream": "none", "name": "Everyday object", "neg": true,
-      "phrases": ["clothing", "a potted plant", "food", "a pen", "a pair of glasses", "a cat", "a dog"] }
+    {
+      "id": "pcb_motherboard",
+      "stream": "pcb",
+      "name": "Computer motherboard",
+      "preset": "pc_board",
+      "phrases": [
+        "a computer motherboard",
+        "a desktop PC motherboard with a CPU socket and RAM slots",
+        "a laptop motherboard"
+      ]
+    },
+    {
+      "id": "pcb_phone",
+      "stream": "pcb",
+      "name": "Phone logic board",
+      "preset": "phone_board",
+      "phrases": [
+        "a smartphone logic board",
+        "a small mobile phone circuit board covered in tiny chips",
+        "the main board taken out of a cell phone"
+      ]
+    },
+    {
+      "id": "pcb_ram",
+      "stream": "pcb",
+      "name": "RAM module",
+      "preset": "pc_board",
+      "phrases": [
+        "a RAM memory stick",
+        "a DIMM memory module with black chips and gold contacts",
+        "computer RAM"
+      ]
+    },
+    {
+      "id": "pcb_gpu",
+      "stream": "pcb",
+      "name": "Graphics card",
+      "preset": "pc_board",
+      "phrases": [
+        "a graphics card",
+        "a GPU video card with a heatsink and fan",
+        "a PCI Express expansion card"
+      ]
+    },
+    {
+      "id": "pcb_generic",
+      "stream": "pcb",
+      "name": "Printed circuit board",
+      "preset": "pc_board",
+      "phrases": [
+        "a green printed circuit board",
+        "a circuit board with chips, resistors and capacitors",
+        "an electronic circuit board",
+        "a PCB with solder joints"
+      ]
+    },
+    {
+      "id": "pcb_lowgrade",
+      "stream": "pcb",
+      "name": "Low-grade board (TV / PSU)",
+      "preset": "tv_board",
+      "phrases": [
+        "a power supply circuit board with big capacitors and a transformer",
+        "a TV circuit board",
+        "a simple single-sided circuit board from a toy or appliance"
+      ]
+    },
+    {
+      "id": "battery_cell",
+      "stream": "battery",
+      "name": "Li-ion cell (18650)",
+      "preset": "liion",
+      "phrases": [
+        "an 18650 lithium-ion battery cell",
+        "a cylindrical rechargeable lithium battery"
+      ]
+    },
+    {
+      "id": "battery_pack",
+      "stream": "battery",
+      "name": "Li-ion battery pack",
+      "preset": "liion",
+      "phrases": [
+        "a rectangular lithium-ion phone battery",
+        "a laptop battery pack",
+        "a rechargeable camera battery"
+      ]
+    },
+    {
+      "id": "battery_alkaline",
+      "stream": "battery",
+      "name": "Alkaline battery",
+      "preset": "alkaline",
+      "phrases": [
+        "AA batteries",
+        "an alkaline battery",
+        "a AAA battery"
+      ]
+    },
+    {
+      "id": "battery_coin",
+      "stream": "battery",
+      "name": "Coin cell",
+      "preset": "coin_cell",
+      "phrases": [
+        "a coin cell button battery",
+        "a CR2032 lithium coin battery"
+      ]
+    },
+    {
+      "id": "cable_power",
+      "stream": "cable",
+      "name": "Power cable / wire",
+      "preset": "cable",
+      "phrases": [
+        "a coil of electrical wire",
+        "an electrical power cable",
+        "a bundle of insulated copper wires"
+      ]
+    },
+    {
+      "id": "cable_usb",
+      "stream": "cable",
+      "name": "USB / data cable",
+      "preset": "cable",
+      "phrases": [
+        "a USB cable",
+        "a phone charging cable",
+        "a USB-C cable connector"
+      ]
+    },
+    {
+      "id": "casing_plastic",
+      "stream": "casing",
+      "name": "Plastic housing",
+      "preset": "casing",
+      "phrases": [
+        "a plastic electronics casing",
+        "a broken plastic housing from an electronic device",
+        "an empty plastic shell of a gadget"
+      ]
+    },
+    {
+      "id": "casing_tower",
+      "stream": "casing",
+      "name": "Computer case",
+      "preset": "casing",
+      "phrases": [
+        "a computer tower case",
+        "a desktop PC case",
+        "an open computer chassis"
+      ]
+    },
+    {
+      "id": "phone",
+      "stream": "phone",
+      "name": "Mobile phone",
+      "preset": "phone",
+      "phrases": [
+        "a smartphone",
+        "a mobile phone",
+        "an old cell phone",
+        "a handheld PDA"
+      ]
+    },
+    {
+      "id": "laptop",
+      "stream": "laptop",
+      "name": "Laptop",
+      "preset": "laptop",
+      "phrases": [
+        "a laptop computer",
+        "an open laptop",
+        "a notebook computer"
+      ]
+    },
+    {
+      "id": "display",
+      "stream": "display",
+      "name": "Monitor / screen",
+      "preset": "display",
+      "phrases": [
+        "a computer monitor",
+        "an LCD screen",
+        "a flat-screen TV",
+        "a CRT monitor"
+      ]
+    },
+    {
+      "id": "hdd",
+      "stream": "storage",
+      "name": "Hard disk drive",
+      "preset": "hdd",
+      "phrases": [
+        "a hard disk drive",
+        "the inside of a hard drive with shiny platters",
+        "an opened hard drive"
+      ]
+    },
+    {
+      "id": "keyboard",
+      "stream": "peripheral",
+      "name": "Keyboard",
+      "preset": "peripheral",
+      "phrases": [
+        "a computer keyboard",
+        "keyboard keys"
+      ]
+    },
+    {
+      "id": "mouse",
+      "stream": "peripheral",
+      "name": "Computer mouse",
+      "preset": "peripheral",
+      "phrases": [
+        "a computer mouse",
+        "a wireless gaming mouse"
+      ]
+    },
+    {
+      "id": "remote",
+      "stream": "peripheral",
+      "name": "Remote control",
+      "preset": "peripheral",
+      "phrases": [
+        "a TV remote control",
+        "a remote control with buttons",
+        "a key fob remote"
+      ]
+    },
+    {
+      "id": "charger",
+      "stream": "charger",
+      "name": "Charger / adapter",
+      "preset": "charger",
+      "phrases": [
+        "a phone charger",
+        "a wall power adapter plug",
+        "an AC adapter power brick"
+      ]
+    },
+    {
+      "id": "audio",
+      "stream": "audio",
+      "name": "Earphones / headphones",
+      "preset": "audio",
+      "phrases": [
+        "earphones",
+        "headphones",
+        "wireless earbuds"
+      ]
+    },
+    {
+      "id": "lamp",
+      "stream": "lamp",
+      "name": "CFL / LED bulb",
+      "preset": "lamp",
+      "phrases": [
+        "a compact fluorescent light bulb",
+        "a spiral CFL bulb",
+        "an LED light bulb",
+        "a fluorescent tube"
+      ]
+    },
+    {
+      "id": "gamepad",
+      "stream": "peripheral",
+      "name": "Game controller",
+      "preset": "small_device",
+      "phrases": [
+        "a video game controller",
+        "a gamepad with buttons and thumbsticks",
+        "a wireless game controller"
+      ]
+    },
+    {
+      "id": "calculator",
+      "stream": "peripheral",
+      "name": "Calculator",
+      "preset": "small_device",
+      "phrases": [
+        "a pocket calculator",
+        "a scientific calculator with a small display"
+      ]
+    },
+    {
+      "id": "usb_drive",
+      "stream": "peripheral",
+      "name": "USB flash drive",
+      "preset": "small_device",
+      "phrases": [
+        "a USB flash drive",
+        "a pen drive",
+        "a USB memory stick"
+      ]
+    },
+    {
+      "id": "router",
+      "stream": "peripheral",
+      "name": "Router / modem",
+      "preset": "small_device",
+      "phrases": [
+        "a wireless router with antennas",
+        "a broadband modem",
+        "a network router"
+      ]
+    },
+    {
+      "id": "camera",
+      "stream": "peripheral",
+      "name": "Digital camera",
+      "preset": "small_device",
+      "phrases": [
+        "a digital camera",
+        "a compact camera with a lens",
+        "a webcam"
+      ]
+    },
+    {
+      "id": "power_bank",
+      "stream": "battery",
+      "name": "Power bank",
+      "preset": "liion",
+      "phrases": [
+        "a power bank",
+        "a portable phone charger battery pack"
+      ]
+    },
+    {
+      "id": "tablet",
+      "stream": "phone",
+      "name": "Tablet",
+      "preset": "phone",
+      "phrases": [
+        "a tablet computer",
+        "an iPad",
+        "an e-reader"
+      ]
+    },
+    {
+      "id": "smartwatch",
+      "stream": "phone",
+      "name": "Smartwatch",
+      "preset": "phone",
+      "phrases": [
+        "a smartwatch",
+        "a fitness tracker band"
+      ]
+    },
+    {
+      "id": "speaker",
+      "stream": "audio",
+      "name": "Portable speaker",
+      "preset": "audio",
+      "phrases": [
+        "a bluetooth speaker",
+        "a portable speaker"
+      ]
+    },
+    {
+      "id": "neg_face",
+      "stream": "none",
+      "name": "Face",
+      "neg": true,
+      "phrases": [
+        "a person's face",
+        "a selfie",
+        "a portrait of a person"
+      ],
+      "human": true
+    },
+    {
+      "id": "neg_hand",
+      "stream": "none",
+      "name": "Empty hand",
+      "neg": true,
+      "phrases": [
+        "an empty open hand",
+        "a human hand with nothing in it",
+        "the palm of a hand"
+      ],
+      "human": true
+    },
+    {
+      "id": "neg_people",
+      "stream": "none",
+      "name": "People",
+      "neg": true,
+      "phrases": [
+        "a person",
+        "people",
+        "a crowd of people"
+      ],
+      "human": true
+    },
+    {
+      "id": "neg_room",
+      "stream": "none",
+      "name": "Room",
+      "neg": true,
+      "phrases": [
+        "a room interior",
+        "an office",
+        "a living room",
+        "a classroom"
+      ]
+    },
+    {
+      "id": "neg_surface",
+      "stream": "none",
+      "name": "Surface",
+      "neg": true,
+      "phrases": [
+        "an empty table",
+        "a blank wall",
+        "the ceiling",
+        "a floor"
+      ]
+    },
+    {
+      "id": "neg_cup",
+      "stream": "none",
+      "name": "Cup / bottle",
+      "neg": true,
+      "phrases": [
+        "a coffee mug",
+        "a water bottle",
+        "a drinking glass"
+      ]
+    },
+    {
+      "id": "neg_book",
+      "stream": "none",
+      "name": "Book / paper",
+      "neg": true,
+      "phrases": [
+        "a book",
+        "a sheet of paper",
+        "a paper notebook"
+      ]
+    },
+    {
+      "id": "neg_misc",
+      "stream": "none",
+      "name": "Everyday object",
+      "neg": true,
+      "phrases": [
+        "clothing",
+        "a potted plant",
+        "food",
+        "a pen",
+        "a pair of glasses",
+        "a cat",
+        "a dog"
+      ]
+    }
   ]
 }
