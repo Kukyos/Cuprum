@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0e0f11">
+  <meta name="description" content="E-waste collection portal: request a free doorstep pickup for old electronics.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="/pickup.css">
+  <title>Request a Pickup — Cuprum</title>
+</head>
+<body>
+  <header class="top">
+    <a href="/" class="wordmark">Cuprum</a>
+    <nav aria-label="Site">
+      <a href="/#scan">Scanner</a>
+      <a href="/pickup.html" aria-current="page">Request a pickup</a>
+      <a href="#requests">My requests</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="intro">
+      <p class="eyebrow">E-waste collection portal</p>
+      <h1>We collect your old electronics from your door.</h1>
+      <p class="lede">Tell us what you have and where you are. A collection van picks it up on the day you choose, and everything goes to a certified recycler. Pickup is free.</p>
+    </section>
+
+    <div class="layout">
+      <form id="pickup-form" class="card" novalidate>
+        <h2>Pickup request</h2>
+
+        <fieldset>
+          <legend>1. What are you giving away?</legend>
+          <div class="chips" id="items">
+            <label><input type="checkbox" name="items" value="phone"> Phone / tablet</label>
+            <label><input type="checkbox" name="items" value="laptop"> Laptop / computer</label>
+            <label><input type="checkbox" name="items" value="display"> TV / monitor</label>
+            <label><input type="checkbox" name="items" value="battery"> Batteries</label>
+            <label><input type="checkbox" name="items" value="charger"> Chargers / adapters</label>
+            <label><input type="checkbox" name="items" value="cable"> Cables / wires</label>
+            <label><input type="checkbox" name="items" value="pcb"> Circuit boards</label>
+            <label><input type="checkbox" name="items" value="storage"> Hard drives</label>
+            <label><input type="checkbox" name="items" value="audio"> Audio devices</label>
+            <label><input type="checkbox" name="items" value="lamp"> Lamps / bulbs</label>
+            <label><input type="checkbox" name="items" value="peripheral"> Other small electronics</label>
+          </div>
+          <p class="error" id="items-error" hidden>Pick at least one item.</p>
+          <label class="field">
+            <span>Roughly how much?</span>
+            <select name="size" required>
+              <option value="A small bag (under 5 kg)">A small bag (under 5 kg)</option>
+              <option value="A box (5–20 kg)">A box (5–20 kg)</option>
+              <option value="Large items (over 20 kg)">Large items (over 20 kg)</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>2. Where should we come?</legend>
+          <div class="locate">
+            <button type="button" class="btn" id="locate-btn">
+              <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><circle cx="10" cy="10" r="3" fill="currentColor"/><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 1v3M10 16v3M1 10h3M16 10h3" stroke="currentColor" stroke-width="1.5"/></svg>
+              Use my current location
+            </button>
+            <span class="hint" id="locate-status" aria-live="polite"></span>
+          </div>
+          <iframe id="map" class="map" title="Map of your pickup location" hidden></iframe>
+          <label class="field">
+            <span>Pickup address</span>
+            <textarea name="address" rows="3" required minlength="10" placeholder="House no., street, area, city, PIN code"></textarea>
+          </label>
+          <label class="field">
+            <span>Landmark <em>(optional)</em></span>
+            <input type="text" name="landmark" placeholder="Near the post office">
+          </label>
+          <input type="hidden" name="lat">
+          <input type="hidden" name="lon">
+        </fieldset>
+
+        <fieldset>
+          <legend>3. When?</legend>
+          <div class="row">
+            <label class="field">
+              <span>Date</span>
+              <input type="date" name="date" id="date" required>
+            </label>
+            <label class="field">
+              <span>Time slot</span>
+              <select name="slot" required>
+                <option value="9 am – 12 pm">9 am – 12 pm</option>
+                <option value="12 pm – 3 pm">12 pm – 3 pm</option>
+                <option value="3 pm – 6 pm">3 pm – 6 pm</option>
+              </select>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>4. Your details</legend>
+          <label class="field">
+            <span>Full name</span>
+            <input type="text" name="name" required autocomplete="name">
+          </label>
+          <div class="row">
+            <label class="field">
+              <span>Phone</span>
+              <input type="tel" name="phone" required pattern="[0-9+\s\-]{10,15}" autocomplete="tel" placeholder="98765 43210">
+            </label>
+            <label class="field">
+              <span>Email <em>(optional)</em></span>
+              <input type="email" name="email" autocomplete="email">
+            </label>
+          </div>
+          <label class="field">
+            <span>Notes for the driver <em>(optional)</em></span>
+            <textarea name="notes" rows="2" placeholder="Gate code, floor, which items are heavy…"></textarea>
+          </label>
+          <label class="check">
+            <input type="checkbox" name="wiped" required>
+            I have removed or wiped personal data from phones, laptops and drives.
+          </label>
+        </fieldset>
+
+        <button type="submit" class="btn primary wide">Book pickup</button>
+        <p class="form-msg" id="form-msg" role="status" aria-live="polite"></p>
+      </form>
+
+      <aside class="side">
+        <section class="card" id="requests">
+          <h2>My requests</h2>
+          <p class="hint" id="empty">No pickups booked yet.</p>
+          <ul class="requests" id="request-list"></ul>
+        </section>
+        <section class="card">
+          <h2>How it works</h2>
+          <ol class="steps">
+            <li><b>Book</b> a slot with this form.</li>
+            <li><b>Pack</b> items in a bag or box. Tape battery terminals.</li>
+            <li><b>Hand over</b> to the collector and get a receipt.</li>
+            <li><b>Recycled</b>: metals are recovered, toxic parts handled safely.</li>
+          </ol>
+        </section>
+        <section class="card">
+          <h2>Not sure what something is?</h2>
+          <p class="hint">Hold it up to the camera in our <a href="/#scan">AI scanner</a> and it tells you what it is and what's inside.</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="foot">Cuprum e-waste collection portal · Requests are saved in this browser only.</footer>
+
+  <script src="/pickup.js"></script>
+</body>
+</html>

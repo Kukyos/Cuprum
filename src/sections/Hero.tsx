@@ -23,6 +23,7 @@ export function Nav() {
         {LINKS.map(([id, name]) => <a key={id} href={`#${id}`}>{name}</a>)}
       </nav>
       <div className="nav-right">
+        <a className="btn" href="/pickup.html">Request pickup</a>
         <span className={`ai-chip is-${ai.status}`} title={ai.device || ai.error || 'Downloading the image model to this browser'}>
           <i className="live-dot" />{label}
         </span>
@@ -50,7 +51,8 @@ export function Hero() {
           estimates the metals inside, then simulates microbes dissolving the copper back out.
         </p>
         <div className="actions">
-          <a className="btn primary" href="#scan">Start scanning</a>
+          <a className="btn primary" href="/pickup.html">Request a pickup</a>
+          <a className="btn" href="#scan">Start scanning</a>
           <a className="btn" href="#leach">Open the simulator</a>
         </div>
       </div>

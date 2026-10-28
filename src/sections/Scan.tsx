@@ -239,7 +239,8 @@ function RouteCard({ stream }: { stream: string }) {
       <ol>{r.steps.map((s) => <li key={s}>{s}</li>)}</ol>
       {r.verdict !== 'none' && (
         <div className="route-actions">
-          <a className="btn primary" href="#metals">See the metals inside</a>
+          <a className="btn primary" href={`/pickup.html?item=${stream}`}>Schedule a pickup</a>
+          <a className="btn" href="#metals">See the metals inside</a>
           {(r.verdict === 'bioleach' || r.boardPreset) && <a className="btn" href="#leach">{r.verdict === 'bioleach' ? 'Bioleach it' : 'Bioleach the board inside'}</a>}
         </div>
       )}
